@@ -1,0 +1,21 @@
+__pycache__/
+*.pyc
+*.pyo
+
+# LiDARキャプチャデータ
+*.laz
+*.las
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python仮想環境
+venv/
+.venv/
