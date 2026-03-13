@@ -27,7 +27,6 @@ from lidar_command import (
     USER_CMD_STANDBY, USER_CMD_RESET, USER_CMD_VERSION_GET,
     USER_CMD_CONFIG_GET, USER_CMD_CONFIG_RESET, USER_CMD_AUTO_STANDBY,
     USER_CMD_LATENCY,
-    PACKET_TYPE_IP_CONFIG,
     WORKMODE_BIT_NORMAL, WORKMODE_BIT_2D, WORKMODE_BIT_IMU_DISPLAY,
     WORKMODE_BIT_UART, WORKMODE_BIT_GRAY_OFF,
 )
@@ -359,23 +358,6 @@ def print_ack_result(ack):
     return status == 1
 
 
-def config_get(conn):
-    """設定情報を取得する (USER_CMD_CONFIG_GET)"""
-    print()
-    print("  設定情報取得中...")
-    conn.flush()
-    conn.send_cmd(USER_CMD_CONFIG_GET, 0)
-    time.sleep(0.5)
-
-    packets = conn.recv_packets(duration=1.0, max_packets=100)
-    ack = parse_ack(packets)
-    if ack:
-        print(f"  ACK: packet_type={ack['packet_type']}, cmd_type={ack['cmd_type']}, "
-              f"cmd_value={ack['cmd_value']}, status={ack['status']}")
-    else:
-        print("  ACKパケット未受信")
-
-
 def set_network(conn):
     """ネットワーク設定を変更する"""
     print()
@@ -565,8 +547,7 @@ def print_work_mode(mode):
     """WorkMode設定を表示する"""
     d = decode_work_mode(mode)
     print(f"    モード値 (raw)    : {mode} (0x{mode:04X}, bin={mode:08b})")
-    print(f"    a) 通信モード     : {d['comm']}"
-          f"  {'[SDK確認済み]' if True else ''}")
+    print(f"    a) 通信モード     : {d['comm']}  [SDK確認済み]")
     print(f"    b) ワークモード   : {d['work_mode']} Mode"
           f"  (NEGA=360°x96° FOV / Normal=標準)")
     print(f"    c) 3D/2Dモード    : {d['dimension']}")
@@ -788,14 +769,22 @@ def main():
     try:
         while True:
             print()
-            print("  ──────────────────────────────────────────")
-            print("  1) 状態表示          7) 起動モード設定")
-            print("  2) バージョン情報    8) 動作モード設定")
-            print("  3) 回転開始          9) ネットワーク設定")
-            print("  4) 回転停止          0) 設定リセット")
-            print("  5) 再起動            a) レイテンシ計測")
-            print("  6) 設定同期          q) 終了")
-            print("  ──────────────────────────────────────────")
+            print("  ─── 情報取得 ────────────────────────────")
+            print("  1) 状態表示      接続・回転・IMU・パケットレート")
+            print("  2) バージョン    HW/FW バージョン・デバイス名")
+            print("  6) 設定同期      内部状態の一括取得 (温度・電圧等)")
+            print("  a) レイテンシ    UDP往復時間を計測")
+            print("  ─── 制御 ────────────────────────────────")
+            print("  3) 回転開始      モーター起動 → 点群出力開始")
+            print("  4) 回転停止      モーター停止 → スタンバイ")
+            print("  5) 再起動        LiDAR本体をリブート")
+            print("  ─── 設定変更 (再起動後に反映) ────────────")
+            print("  7) 起動モード    電源ON時の自動起動/コマンド起動")
+            print("  8) 動作モード    3D/2D, NEGA/Normal, UART/ENET等")
+            print("  9) ネットワーク  IP・ポートの変更")
+            print("  0) 設定リセット  工場出荷時に戻す")
+            print("  ─────────────────────────────────────────")
+            print("  q) 終了")
             print()
 
             choice = input("  番号を入力: ").strip().lower()

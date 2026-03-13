@@ -55,14 +55,6 @@ CMD_GET_VERSION = USER_CMD_VERSION_GET
 CMD_START_ROTATION = "start"        # センチネル: build_command内で処理
 CMD_STOP_ROTATION = "stop"          # センチネル: build_command内で処理
 CMD_REBOOT = USER_CMD_RESET
-CMD_SET_WORKING_MODE = "work_mode"  # センチネル: build_command内で処理
-
-# 動作モード (LidarWorkModeConfig.mode)
-# uint32_t mode のビットフラグ（マニュアル + SDK から推定）
-# mode=0 が全デフォルト設定に対応
-# bit 3 (0x08) = UART は SDK example で確認済み、他は推定
-MODE_3D_POINT_CLOUD = 0             # UDP 3D点群モード（全デフォルト）
-
 # WorkMode ビットフラグ定義（推定、要実機検証）
 # マニュアル記載の全設定項目が SetMode → Restart で反映される
 WORKMODE_BIT_NORMAL = 0             # bit 0: 0=NEGA Mode(default), 1=Normal Mode
@@ -138,8 +130,6 @@ def build_command(cmd_id, param: int = 0) -> bytes:
         return build_user_cmd(USER_CMD_STANDBY, 0)
     elif cmd_id == CMD_STOP_ROTATION:
         return build_user_cmd(USER_CMD_STANDBY, 1)
-    elif cmd_id == CMD_SET_WORKING_MODE:
-        return build_work_mode(param)
     elif cmd_id == CMD_REBOOT:
         return build_user_cmd(USER_CMD_RESET, 1)
     else:
@@ -176,9 +166,9 @@ def start_lidar(lidar_ip: str = LIDAR_IP, lidar_port: int = LIDAR_PORT,
 
     cmd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     cmd_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    cmd_sock.bind((local_ip, 0))
-    bound_port = cmd_sock.getsockname()[1]
-    print(f"[情報] コマンドソケット: {local_ip}:{bound_port}")
+    cmd_sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4 * 1024 * 1024)
+    cmd_sock.bind((local_ip, local_port))
+    print(f"[情報] ソケット: {local_ip}:{local_port}")
 
     # 1. バージョン取得（通信テスト）
     print()
@@ -203,20 +193,15 @@ def start_lidar(lidar_ip: str = LIDAR_IP, lidar_port: int = LIDAR_PORT,
     else:
         print("  応答なし")
 
-    # データ受信確認
+    # データ受信確認（コマンドソケットをそのまま使用）
     print()
     print("[確認] データ受信を待機中...")
-
-    data_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    data_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    data_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-    data_sock.settimeout(5.0)
-    data_sock.bind((local_ip, local_port))
+    cmd_sock.settimeout(5.0)
 
     received = 0
     try:
         for _ in range(10):
-            data, addr = data_sock.recvfrom(65535)
+            data, addr = cmd_sock.recvfrom(65535)
             received += 1
             if received == 1:
                 print(f"  データ受信開始! 送信元: {addr}")
@@ -235,8 +220,6 @@ def start_lidar(lidar_ip: str = LIDAR_IP, lidar_port: int = LIDAR_PORT,
             print("  1. LiDARの電源が入っているか")
             print("  2. イーサネットケーブルが接続されているか")
             print(f"  3. LiDARの送信先設定 ({local_ip}:{local_port})")
-    finally:
-        data_sock.close()
 
     if received > 0:
         print(f"  {received}パケット正常受信")

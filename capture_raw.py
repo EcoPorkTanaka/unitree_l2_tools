@@ -14,6 +14,7 @@ LiDARから受信した点群を座標変換なしでLAZファイルに保存す
 """
 
 import argparse
+import os
 import socket
 import struct
 import time
@@ -250,7 +251,6 @@ def main():
     print(f"[情報] LAZ保存中: {output}")
     save_laz(points, intensities, output)
 
-    import os
     size = os.path.getsize(output)
     print(f"[完了] {output} ({size:,}バイト, {len(points):,}点)")
 
